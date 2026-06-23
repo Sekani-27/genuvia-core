@@ -1,6 +1,8 @@
 # Genuvia Core
 
-An organisational memory and decision intelligence system for small technical teams. Captures decisions, detects contradictions, and surfaces context — so your team stops losing institutional knowledge between conversations.
+**The persistent intelligence layer for technical founders who can't afford to lose context.**
+
+Small teams make fast decisions. Most of them disappear — into Slack threads, forgotten meetings, and the memory of people who later leave. Core captures decisions, detects contradictions, and surfaces forgotten context before it costs you.
 
 Built for technical founders on 2–15 person teams. Delivered via Telegram. Deployed on Railway.
 
@@ -8,17 +10,111 @@ Built for technical founders on 2–15 person teams. Delivered via Telegram. Dep
 
 ## The Problem
 
-Your team makes a decision. Three weeks later someone makes the opposite one — without knowing. A new hire asks why you chose PostgreSQL over MongoDB. Nobody remembers. You're debugging at 2am and realise this exact failure mode was flagged in a meeting six months ago.
+Your team decides to use PostgreSQL because your reporting queries need relational joins.
 
-**Core remembers. Your team forgets.**
+Three months later, someone proposes migrating to MongoDB to simplify scaling.
+
+Nobody connects the two. The original reasoning is gone.
+
+Core connects them.
 
 ---
 
-## What It Does
+## How It Works
 
-Genuvia Core is a Telegram bot backed by a vector store and a reasoning engine. Team members log decisions, capture context, and query organisational memory — all from Telegram, without changing how they work.
+**Week 1**
+```
+/remember We chose PostgreSQL over MongoDB because reporting queries require relational joins.
+```
 
-When a new entry contradicts something already in memory, Core flags it immediately, with context, without blame.
+Core stores the decision, the rationale, the author, and the timestamp.
+
+**Three months later**
+```
+/remember We should migrate to MongoDB to simplify scaling.
+```
+
+Core responds:
+```
+Potential contradiction detected.
+
+On March 12 your team decided to use PostgreSQL
+because reporting required relational joins.
+
+Would you like to review that decision before proceeding?
+```
+
+That's the hook. But the value compounds.
+
+Over time, Core becomes your team's:
+- **Organisational memory** — every decision and why it was made
+- **Onboarding assistant** — new hires query context instead of interrupting the team
+- **Accountability system** — decisions are attributed and timestamped
+- **Context engine** — surface what was decided before making the next call
+
+---
+
+## Why Not ChatGPT Memory?
+
+| ChatGPT Memory | Genuvia Core |
+|---|---|
+| Remembers one user | Remembers an entire organisation |
+| No shared team memory | Shared workspace memory across your team |
+| No contradiction detection | Flags conflicting decisions automatically |
+| Not structured around decisions | Built around decisions and rationale |
+| No tenant isolation | Multi-tenant workspaces, isolated per team |
+
+---
+
+## Commands (V1)
+
+| Command | Description |
+|---|---|
+| `/remember [decision]` | Stores a decision and its context |
+| `/why [topic]` | Retrieves the rationale behind past decisions |
+| `/search [query]` | Semantic search across your team's memory |
+| `/contradictions` | Lists recently flagged contradictions |
+| `/status` | Shows memory stats for your workspace |
+
+---
+
+## Contradiction Detection
+
+When you log a new decision, Core doesn't just store it — it checks it.
+
+```
+New entry logged
+    │
+    ▼
+Embed entry → search vector store for similar past decisions
+    │
+    ▼
+If similarity above threshold:
+    Send both entries to reasoning model
+    Ask: "Do these contradict each other? If so, how?"
+    │
+    ▼
+Second Telegram message with finding
+(flags the conflict, not the person)
+```
+
+Confirmation arrives first. The contradiction result follows within seconds, asynchronously.
+
+---
+
+## Roadmap
+
+**Phase 1 — Organisational Memory** ✓
+Store decisions and rationale. Surface context on demand.
+
+**Phase 2 — Decision Intelligence** ✓
+Detect contradictions. Flag forgotten context before it causes mistakes.
+
+**Phase 3 — Organisational Advisor**
+Proactively surface relevant past decisions before new ones are made.
+
+**Phase 4 — Autonomous Context Layer**
+Become the persistent intelligence system behind the organisation — not a tool you query, but one that anticipates.
 
 ---
 
@@ -36,50 +132,11 @@ FastAPI Backend (Railway)
     │       Returns result as a second message (async, non-blocking)
     │
     ├── Qdrant Cloud (vector store)
-    │       Stores decisions, rationale, and metadata per tenant
+    │       Decisions stored with metadata per tenant
     │
     └── Tenant / Owner Identity Model
             Each workspace is isolated by tenant ID
-            Owner has admin commands; members can read and write
 ```
-
----
-
-## Commands (V1 Scope)
-
-| Command | Description |
-|---|---|
-| `/remember [decision]` | Stores a decision or piece of context into organisational memory |
-| `/why [topic]` | Retrieves the rationale behind past decisions on a topic |
-| `/search [query]` | Semantic search across your team's memory |
-| `/contradictions` | Lists recently flagged contradictions |
-| `/status` | Shows memory stats for your workspace |
-
----
-
-## Contradiction Detection
-
-The core differentiator. When you log a new decision, Core does not just store it — it checks it.
-
-```
-New entry logged
-    │
-    ▼
-Embed entry → search Qdrant for top-k similar decisions
-    │
-    ▼
-If similarity above threshold:
-    Send both entries to reasoning model
-    Ask: "Do these contradict each other? If so, how?"
-    │
-    ▼
-Return second Telegram message with finding
-(non-accusatory framing — flags the conflict, not the person)
-```
-
-This runs asynchronously. The confirmation message arrives first. The contradiction result follows within seconds.
-
----
 
 ## Tech Stack
 
@@ -87,10 +144,9 @@ This runs asynchronously. The confirmation message arrives first. The contradict
 |---|---|
 | Interface | Telegram Bot API |
 | Backend | Python · FastAPI |
-| Vector store | Qdrant Cloud (free tier) |
+| Vector store | Qdrant Cloud |
 | Reasoning | Claude API · OpenAI API |
 | Deployment | Railway |
-| Identity | Tenant/owner model with isolated workspaces |
 
 ---
 
@@ -114,20 +170,6 @@ ANTHROPIC_API_KEY=
 
 ---
 
-## Roadmap
-
-- [x] V1: Five core Telegram commands
-- [x] Contradiction detection engine
-- [x] Tenant isolation model
-- [x] Railway deployment
-- [ ] Slack integration
-- [ ] Web dashboard
-- [ ] Mobile app (post first paying customer)
-
----
-
-## Project Context
-
-Genuvia Core is the decision intelligence layer of the [Genuvia](https://github.com/Sekani-27) platform — positioned alongside Genuvia Edge (trading intelligence) as part of an AI infrastructure stack for small, fast-moving teams.
+Built by [Ntando Miya](https://github.com/Sekani-27) · Co-founder, Genuvia (Pty) Ltd · Johannesburg
 
 Built by [Ntando Miya](https://github.com/Sekani-27) · Co-founder, Genuvia (Pty) Ltd · Johannesburg
