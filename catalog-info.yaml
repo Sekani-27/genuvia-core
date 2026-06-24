@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: genuvia-core
+  description: Organisational memory and decision intelligence system
+  tags:
+    - python
+    - fastapi
+    - postgresql
+    - qdrant
+    - railway
+  links:
+    - url: https://github.com/Sekani-27/genuvia-core
+      title: GitHub
+      icon: github
+spec:
+  type: service
+  lifecycle: beta
+  owner: user:ntando-miya
+  system: genuvia
