@@ -1,55 +1,50 @@
-import asyncpg
-from app.config import DATABASE_URL
+import aiosqlite
+import uuid
+from datetime import datetime, timezone
 
-_pool: asyncpg.Pool | None = None
-
-
-async def get_pool() -> asyncpg.Pool:
-    global _pool
-    if _pool is None:
-        _pool = await asyncpg.create_pool(DATABASE_URL)
-    return _pool
-
-
-async def close_pool() -> None:
-    global _pool
-    if _pool:
-        await _pool.close()
-        _pool = None
-
-
-CREATE_SCHEMA = """
-CREATE TABLE IF NOT EXISTS tenants (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        TEXT NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS users (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    telegram_id BIGINT UNIQUE,
-    display_name TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS memories (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    owner_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type        TEXT NOT NULL CHECK (type IN ('decision', 'commitment', 'lesson')),
-    content     TEXT NOT NULL,
-    timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    status      TEXT NOT NULL DEFAULT 'active',
-    source      TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS memories_owner_idx ON memories(owner_id);
-CREATE INDEX IF NOT EXISTS memories_tenant_idx ON memories(tenant_id);
-"""
-
+DB_PATH = "genuvia_core.db"
 
 async def init_schema() -> None:
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        await conn.execute(CREATE_SCHEMA)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS memories (
+                id TEXT PRIMARY KEY,
+                service TEXT NOT NULL,
+                type TEXT NOT NULL CHECK (type IN ('decision', 'commitment', 'lesson')),
+                content TEXT NOT NULL,
+                owner TEXT NOT NULL DEFAULT 'ntando-miya',
+                timestamp TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active'
+            )
+        """)
+        await db.commit()
+
+async def save_memory(service: str, type: str, content: str, owner: str = "ntando-miya") -> dict:
+    memory_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO memories (id, service, type, content, owner, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (memory_id, service, type, content, owner, timestamp)
+        )
+        await db.commit()
+    return {"id": memory_id, "service": service, "type": type, "content": content, "owner": owner, "timestamp": timestamp}
+
+async def get_memories(service: str = None, type: str = None) -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        query = "SELECT * FROM memories WHERE status = 'active'"
+        params = []
+        if service:
+            query += " AND service = ?"
+            params.append(service)
+        if type:
+            query += " AND type = ?"
+            params.append(type)
+        query += " ORDER BY timestamp DESC"
+        cursor = await db.execute(query, params)
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+async def close_pool() -> None:
+    pass
